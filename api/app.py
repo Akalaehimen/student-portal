@@ -6,11 +6,15 @@ from .utils import db
 from flask_migrate import Migrate
 from Blocklist import BLOCKLIST
 from datetime import timedelta
+from api.auth.User import blp as auth_blueprint
+from api.auth.Score import blp as score_blueprint
+from api.auth.Course import blp as course_blueprint
+
 
 def create_app(db_url=None):
     app = Flask(__name__)
     app.config["PROPAGATE_EXCEPTIONS"] = True
-    app.config["API_TITLE"] = "Store REST API"
+    app.config["API_TITLE"] = "Student Portal API"
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["OPENAPI_URL_PREFIX"] = "/"
@@ -75,8 +79,8 @@ def create_app(db_url=None):
     def create_tables():
         db.create_all()
 
-    # api.register_blueprint(StoreBlueprint)
-    # api.register_blueprint(ItemBlueprint)
-    # api.register_blueprint(UserBlueprint)
+    api.register_blueprint(auth_blueprint)
+    api.register_blueprint(score_blueprint)
+    api.register_blueprint(course_blueprint)
 
     return app
