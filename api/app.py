@@ -9,9 +9,10 @@ from datetime import timedelta
 from api.auth.User import blp as auth_blueprint
 from api.auth.Score import blp as score_blueprint
 from api.auth.Course import blp as course_blueprint
+from api.config.config import config_dict
 
 
-def create_app(db_url=None):
+def create_app(db_url=None, config=config_dict['dev']):
     app = Flask(__name__)
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Student Portal API"
@@ -24,14 +25,6 @@ def create_app(db_url=None):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
-    api = Api(app,
-        title='Student portal API',
-        description='A simple student portal REST API service',
-        authorizations=authorizations,
-        security='Bearer Auth')
-
-    migrate = Migrate(app, db)
-
     authorizations = {
         "Bearer Auth": {
             "type": "apiKey",
@@ -41,6 +34,16 @@ def create_app(db_url=None):
         }
     }
 
+    api = Api(app,
+        # # title='Student portal API',
+        # description='A simple student portal REST API service',
+        # authorizations=authorizations,
+        # security='Bearer Auth'
+        )
+
+    migrate = Migrate(app, db)
+
+    
     app.config["JWT_SECRET_KEY"] = "veryrandomstuff"
     jwt = JWTManager(app)
 
@@ -80,7 +83,7 @@ def create_app(db_url=None):
         db.create_all()
 
     api.register_blueprint(auth_blueprint)
-    api.register_blueprint(score_blueprint)
-    api.register_blueprint(course_blueprint)
+    # api.register_blueprint(score_blueprint)
+    # api.register_blueprint(course_blueprint)
 
     return app
