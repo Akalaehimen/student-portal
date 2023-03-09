@@ -1,14 +1,18 @@
+import random
+from datetime import timedelta
+
 from flask.views import MethodView
+from flask_jwt_extended import (create_access_token, create_refresh_token,
+                                get_jwt, get_jwt_identity, jwt_required)
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
-from Models.User import UserModel
-from utils import db
-from schema import UserSchema
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
-from datetime import timedelta
-from Blocklist import BLOCKLIST
 from sqlalchemy.exc import IntegrityError
-import random
+
+from Blocklist import BLOCKLIST
+from schema import UserSchema
+
+from ..Models.User import UserModel
+from ..utils import db
 
 blp = Blueprint("Users", "users", description="Operations on Users")
 

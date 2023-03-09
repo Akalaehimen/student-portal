@@ -1,4 +1,4 @@
-from utils import db
+from ..utils import db
 from datetime import datetime
 
 class CourseModel(db.Model):
@@ -10,7 +10,7 @@ class CourseModel(db.Model):
     course_name = db.Column(db.String, unique=True, nullable=False)
     credit_hour = db.Column(db.Integer, unique=False, nullable=False)
     Lecturer_name = db.Column(db.String, unique=True, nullable=False)
-    date_created = db.Column(db.Datetime(), nullable=False, default=datetime)
+    date_created = db.Column(db.DateTime(), nullable=False, default=datetime)
     
 
 def __repr__(self):

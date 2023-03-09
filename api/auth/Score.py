@@ -1,6 +1,6 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
-from utils import db
+from ..utils import db
 from schema import ScoreSchema
 from flask_jwt_extended import  jwt_required
 
