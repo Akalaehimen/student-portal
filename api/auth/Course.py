@@ -1,7 +1,7 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from Models.Course import CourseModel
-from utils import db
+from ..Models.Course import CourseModel
+from ..utils import db
 from schema import CourseSchema
 from flask_jwt_extended import  jwt_required
 
