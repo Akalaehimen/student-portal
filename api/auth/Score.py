@@ -1,73 +1,98 @@
 from flask.views import MethodView
-from flask_smorest import Blueprint
-from utils import db
-from schema import ScoreSchema
+from flask_smorest import Blueprint, abort
+from ..utils import db
+from api.schema import ScoreSchema
 from flask_jwt_extended import  jwt_required
+from api.schema import ResultSchema
+from ..Models.User import StudentModel
+from ..Models.retrive import Grade
+from flask import jsonify
+
 
 blp = Blueprint("Scores", "scores", description="Operations on Score")
 
 @blp.route("/scores")
-class Registerscores(MethodView):
-    @blp.arguments(ScoreSchema)
-    def post(self):
-        # dictionary to map grades to it's corresponding values
+class CalculateGPA(MethodView):
+    @blp.arguments(ScoreSchema(many=True))
+    def post(self, scores):
+        # dictionary to map grades to their corresponding values
         grade_values = {
-            'A+':4.0,
-            'A':4.0,
-            'A-':3.7,
-            'B+':3.3,
-            'B':3.0,
-            'B-':2.7,
-            'C+':2.3,
-            'C':2.0,
-            'C-':1.7,
-            'D+':1.3,
-            'D':1.0,
-            'D-':0.7,
-            'F':0,
+            'A+': 4.0,
+            'A': 4.0,
+            'A-': 3.7,
+            'B+': 3.3,
+            'B': 3.0,
+            'B-': 2.7,
+            'C+': 2.3,
+            'C': 2.0,
+            'C-': 1.7,
+            'D+': 1.3,
+            'D': 1.0,
+            'D-': 0.7,
+            'F': 0,
         }
 
-        # prompt the user to enter the number of courses
-        No_of_course_reg = int(input('Enter the number of courses registered: '))
-
-        # initialize variable to store the total gpa and the number of subject
+        # initialize variable to store the total gpa and the number of courses
         total_gpa = 0
         count = 0
 
         # loop through each course
-        while count < No_of_course_reg:
+        for score in scores:
+            name_of_course = score['name']
+            grade = score['grade']
 
-        #  prompt the user to enter the name of the course and the grade 
-         Name_of_course = input('Enter the name of the course registered: ')
-         Grade = input('Enter the Grade: ') 
+            # convert the grade to uppercase to make it non-case sensitive
+            grade = grade.upper()
 
-        #  convert the grade to uppercase to make it non-case sensitive
-        Grade = Grade.upper
+            # check if the grade is valid
+            if grade not in grade_values:
+                abort(400, message="Invalid grade, please enter a valid grade.")
 
-        # check if the grade is valid
-        if Grade not in grade_values:
-           return {"message": "invalid grade please enter a valid grade."}
-        else:
-           pass
+            # print the course and grade
+            print(f'({name_of_course.capitalize()}:{grade})')
 
-        # print the course and grade
-        print(f'({Name_of_course.capitalize()}:{Grade})')
-    
-        # prompt the user  to confirm the entry
-        Confirmation = input('is this entry correct?(yes/no)')
-        if Confirmation.lower() != 'yes':
-           pass
+            # add the gpa value of the grade to the total gpa
+            total_gpa += grade_values[grade]
+            count += 1
 
-        # add the gpa value of the grade to the total gpa
-        total_gpa += grade_values[Grade]
-        count += 1
-
-        # calculate the average Gpa
+        # calculate the average gpa
         average_gpa = total_gpa / count
 
-        # print the average_gpa
-        return{f'Your Average Gpa is:{average_gpa:.2f}'}
-    
+        # return the average gpa
+        return {"Your average_gpa is": average_gpa}
+
+
+
+
+
+# retrieving a student by is matric no
+@blp.route("/results/<string:unique_id>")
+class StudentResult(MethodView):
+    @jwt_required()
+    @blp.response(200, ResultSchema)
+    def get(self, unique_id):
+        student = StudentModel.query.filter_by(matric_no=unique_id).first()
+        if student is None:
+            abort(404, message="Student not found")
         
-
-
+        # assuming the grades are stored in a separate model
+        grades = Grade.query.filter_by(student_id=student.id).all()
+        
+        if grades is None or len(grades) == 0:
+            abort(404, message="No grades found for this student")
+        
+        # calculate the average grade for the student
+        total_grade = 0
+        for grade in grades:
+            total_grade += grade.grade
+        
+        average_grade = total_grade / len(grades)
+        
+        # create a dictionary representing the student's result
+        result = {
+            "unique_id": unique_id,
+            "name": f"{student.surname} {student.firstname}",
+            "average_grade": average_grade
+        }
+        
+        return result

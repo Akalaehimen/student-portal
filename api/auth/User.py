@@ -1,57 +1,67 @@
+import random
+from datetime import timedelta
+
 from flask.views import MethodView
+from flask_jwt_extended import (create_access_token, create_refresh_token,
+                                get_jwt, get_jwt_identity, jwt_required)
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
-from Models.User import UserModel
-from utils import db
-from schema import UserSchema
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
-from datetime import timedelta
-from Blocklist import BLOCKLIST
 from sqlalchemy.exc import IntegrityError
-import random
+
+from Blocklist import BLOCKLIST
+from api.schema import UserSchema, UsersSchema
+
+from ..Models.User import StudentModel
+from ..utils import db
+from flask import request
 
 blp = Blueprint("Users", "users", description="Operations on Users")
+
 
 @blp.route("/register")
 class UserRegister(MethodView):
     @blp.arguments(UserSchema)
     def post(self, user_data):
-        if UserModel.query.filter(UserModel.email == user_data["email"]).first():
-            abort(409, message="This Email already exist")
+        if StudentModel.query.filter_by(email=user_data["email"]).first():
+            abort(409, message="This Email already exists")
         
-        user = UserModel(
-            Surname = user_data["Surname"],
-            Firstname = user_data["Firstname"],
-            password = pbkdf2_sha256.hash(user_data["password"])
+        user = StudentModel(
+            surname=user_data["surname"],
+            firstname=user_data["firstname"],
+            email=user_data["email"],
+            password=pbkdf2_sha256.hash(user_data["password"])
         )
 
+        user_matric_no = self.generate_unique_id()
         
         db.session.add(user)
         db.session.commit()
-    
-    def generate_unique_id(length=4):
-     letters = 'ST'
-     unique_id = ''.join(random.choice(letters) for i in range(length))
-     user_number = unique_id()
-     return {"User created succesfully your matric no is:", user_number}, 201
-
+        
+        return {"message": "User created successfully", "matric_no": user_matric_no}, 201
+        
+    def generate_unique_id(self, length=4):
+        letters = 'ST'
+        unique_id = ''.join(random.choice(letters) for i in range(length))
+        user_number = f"{unique_id}{random.randint(1000, 9999)}"
+        return user_number
 
 
 @blp.route("/login")
 class Login(MethodView):
     @blp.arguments(UserSchema)
     def post(self, user_data):
-        user = UserModel.query.filter(
-            UserModel.email == user_data["email"]
+        user = StudentModel.query.filter(
+            StudentModel.email == user_data["email"]
         ).first()
 
         if user and pbkdf2_sha256.verify(user_data["password"], user.password):
             access_token = create_access_token(identity=user.id, fresh=True)
             refresh_token = create_refresh_token(identity=user.id)
 
-            return {"access_token": access_token, "refresh_token": refresh_token}
+            return {"message": "User successfully logged in", "access_token": access_token, "refresh_token": refresh_token}
         
         abort(401, message="Invalid Credentials")
+
 
 @blp.route("/refresh")
 class TokenRefresh(MethodView):
@@ -82,21 +92,39 @@ class User(MethodView):
     # Get a student by id
     @blp.response(200, UserSchema)
     def get(self, user_id):
-        user = UserModel.query.get_or_404(user_id)
+        user = StudentModel.query.get_or_404(user_id)
         return user
     
     # Delete a student by id
     def delete(self, user_id):
-        user = UserModel.query.get_or_404(user_id)
+        user = StudentModel.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
 
         return {"message": "Student Deleted"}, 200
+    
+
 
 @blp.route("/users")
 class UserList(MethodView):
     # retrieving all student
     @blp.response(200, UserSchema(many=True))
     def get(self):
-        all_student = UserModel.query.all()
+        all_student = StudentModel.query.all()
         return all_student
+    
+# update a student
+@blp.route("/students/<int:student_id>", methods=["PUT"])
+class UpdateStudent(MethodView):
+    @blp.arguments(UsersSchema)
+    @blp.response(200, UsersSchema)
+    def put(self, student_data, student_id):
+        student = StudentModel.query.get(student_id)
+        if student:
+            student.firstname = student_data.get("firstname")
+            student.surname = student_data.get("surname")
+            student.email = student_data.get("email")
+            db.session.commit()
+            return student, 200
+        else:
+            abort(404, message="Student not found")

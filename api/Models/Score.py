@@ -1,11 +1,16 @@
-from utils import db
+from ..utils import db
+from datetime import datetime
 
-class UserModel(db.Model):
-    __tablename__ = "Score"
+class ScoreModel(db.Model):
+    __tablename__ = "scores"
     id = db.Column(db.Integer, primary_key=True)
-    Name_of_course = db.Column(db.String(150), unique=False, nullable=False)
-    No_of_course_reg = db.Column(db.Integer, nullable=False)
-    Grade = db.Column(db.String(80),  nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    grade = db.Column(db.String(), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    date_created = db.Column(db.DateTime(), nullable=False, default=datetime.utcnow)
 
-def __repr__(self):
-        return f"<User {self.Grade}>"
+    student = db.relationship("StudentModel", backref="scores")
+
+    def __repr__(self):
+        return f"<Score {self.score}>"

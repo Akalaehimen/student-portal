@@ -5,9 +5,9 @@ from datetime import timedelta
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
-uri = config('DATABASE_URL')  # or other relevant config var
-if uri.startswith('postgres://'):
-    uri = uri.replace('postgres://', 'postgresql://', 1)
+# uri = config('DATABASE_URL')  # or other relevant config var
+# if uri.startswith('postgres://'):
+#     uri = uri.replace('postgres://', 'postgresql://', 1)
 
 class Config:
     SECRET_KEY = config('SECRET_KEY', 'secret')

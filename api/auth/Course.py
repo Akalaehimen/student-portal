@@ -1,27 +1,31 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from Models.Course import CourseModel
-from utils import db
-from schema import CourseSchema
+from ..Models.Course import CourseModel
+from ..utils import db
+from api.schema import CourseSchema, CoursesSchema
 from flask_jwt_extended import  jwt_required
+from ..auth.admin import admin_required
+from flask import jsonify
+
+
 
 
 blp = Blueprint("Courses", "courses", description="Operations on Courses")
+
 
 @blp.route("/registercourses")
 class Registercourses(MethodView):
     @blp.arguments(CourseSchema)
     def post(self, user_data):
-        if CourseModel.query.filter(CourseModel.id== user_data["id"]).first():
+        if 'id' in user_data and CourseModel.query.filter(CourseModel.id== user_data["id"]).first():
             abort(409, message="A student with this id has already been registered for this course")
 
         new_course = CourseModel(
-            Surname = user_data["Surname"],
-            Firstname = user_data["Firstname"],
             course_code = user_data["course_code"],
-            course_name = user_data["course_name"],
-            credit_hour = user_data["credit_hour"],  
+            course_name = user_data["course_name"],  
             Lecturer_name = user_data["Lecturer_name"],
+            firstname = user_data["firstname"],
+            surname = user_data["surname"]
         )
 
         
@@ -32,17 +36,20 @@ class Registercourses(MethodView):
 # Getting all courses
 @blp.route("/Courses")
 class StoreList(MethodView):
-    @jwt_required()
+    # @jwt_required()
     @blp.response(200, CourseSchema(many=True))
     def get(self):
         return CourseModel.query.all()
 
 
 # Retrieving student offering a course by its course name
-@blp.route("/Courses/Course_name")
-class Store(MethodView):
-    @jwt_required()
-    @blp.response(200, CourseSchema)
-    def get(self, Course_name):
-        Course = CourseModel.query.get_or_404(Course_name)
-        return Course
+
+@blp.route('/students/<course>', methods=['GET'])
+def get_students_by_course(course):
+    students_with_course = []
+    for student in CourseModel.query.filter(CourseModel.course_name.contains(course)):
+        students_with_course.append({'firstname': student.firstname, 'surname': student.surname, 'course_code': student.course_code})
+    return jsonify(students_with_course)
+
+
+
