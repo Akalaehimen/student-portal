@@ -2,7 +2,11 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from ..Models.Course import CourseModel
 from ..utils import db
+<<<<<<< HEAD
 from api.schema import CourseSchema, CoursesSchema
+=======
+from schema import CourseSchema
+>>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 from flask_jwt_extended import  jwt_required
 from ..auth.admin import admin_required
 from flask import jsonify

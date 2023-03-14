@@ -9,11 +9,18 @@ from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import IntegrityError
 
 from Blocklist import BLOCKLIST
+<<<<<<< HEAD
 from api.schema import UserSchema, UsersSchema
 
 from ..Models.User import StudentModel
 from ..utils import db
 from flask import request
+=======
+from schema import UserSchema
+
+from ..Models.User import UserModel
+from ..utils import db
+>>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 
 blp = Blueprint("Users", "users", description="Operations on Users")
 

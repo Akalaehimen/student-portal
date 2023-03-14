@@ -1,5 +1,8 @@
 from ..utils import db
+<<<<<<< HEAD
 from datetime import datetime
+=======
+>>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 
 class ScoreModel(db.Model):
     __tablename__ = "scores"

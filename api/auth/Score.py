@@ -1,7 +1,13 @@
 from flask.views import MethodView
+<<<<<<< HEAD
 from flask_smorest import Blueprint, abort
 from ..utils import db
 from api.schema import ScoreSchema
+=======
+from flask_smorest import Blueprint
+from ..utils import db
+from schema import ScoreSchema
+>>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 from flask_jwt_extended import  jwt_required
 from api.schema import ResultSchema
 from ..Models.User import StudentModel

@@ -5,12 +5,23 @@ from datetime import datetime
 class CourseModel(db.Model):
     __tablename__ = "Courses"
     id = db.Column(db.Integer, primary_key=True)
+<<<<<<< HEAD
     course_code = db.Column(db.String(20), unique=False, nullable=False)
     course_name = db.Column(db.String(120), nullable=False)
     firstname = db.Column(db.String(120), nullable=False)
     surname = db.Column(db.String(120), nullable=False)
     Lecturer_name = db.Column(db.String(120), nullable=False)
     date_created = db.Column(db.DateTime(), nullable=False, default=datetime.utcnow)
+=======
+    Surname = db.Column(db.String(150), unique=False, nullable=False)
+    Firstname = db.Column(db.String(150), unique=False, nullable=False)
+    course_code = db.Column(db.Integer, unique=True, nullable=False)
+    course_name = db.Column(db.String, unique=True, nullable=False)
+    credit_hour = db.Column(db.Integer, unique=False, nullable=False)
+    Lecturer_name = db.Column(db.String, unique=True, nullable=False)
+    date_created = db.Column(db.DateTime(), nullable=False, default=datetime)
+    
+>>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 
    
 
