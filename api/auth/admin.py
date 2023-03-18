@@ -3,42 +3,48 @@ from functools import wraps
 from flask import Flask
 from flask import jsonify
 
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity
-from flask_jwt_extended import get_jwt
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, get_jwt
 from flask_jwt_extended import JWTManager
-from flask_jwt_extended import verify_jwt_in_request
 from flask import request
+from functools import wraps
 from flask_smorest import Blueprint, abort
 from flask.views import MethodView
 from ..utils import db
-# from schema import AdminSchema
 from passlib.hash import pbkdf2_sha256
 from ..Models.admin import AdminModel
-from ..schema import AdminSchema, AdminlogSchema
+from ..schema import AdminSchema, AdminlogSchema, AdminsSchema
+from Blocklist import BLOCKLIST
+from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import  jwt_required
 
+
 blp = Blueprint("Admins", "admins", description="Operations on Admins")
+refresh_bp = Blueprint('refresh_bp', __name__, url_prefix='/refresh')
+Admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admins')
 
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = "3c62c7ca4baefb92"  
 jwt = JWTManager(app)
 
-# an administrator
-def admin_required():
-    def wrapper(fn):
-        @wraps(fn)
-        def decorator(*args, **kwargs):
-            verify_jwt_in_request()
-            claims = get_jwt()
-            if claims["is_administrator"]:
-                return fn(*args, **kwargs)
-            else:
-                return jsonify(msg="Admins only!"), 403
 
-        return decorator
-
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        current_user_id = get_jwt_identity()
+        # Only allow access to users with the role "admin"
+        if current_user_id.role != "admin":
+            return {"message": "You are not authorized to access this resource."}, 403
+        return fn(*args, **kwargs)
     return wrapper
+
+
+@blp.route('/admin_only')
+@admin_required
+def admin_only():
+    return {"message": "This route is only accessible by administrators."}
+   
+
 
 
 @blp.route('/register-admin')
@@ -69,40 +75,37 @@ class AdminRegister(MethodView):
         return {"message": "Admin user created successfully"}, 201
     
 
-
+# login an admin  
 @blp.route('/login-admin')
 class Login(MethodView):
     @blp.arguments(AdminlogSchema)
-    @jwt_required()
-    def post(self, user):
-    # load user data from the request body
-        admin_data = request.get_json()
-        email = admin_data.get('email')
-        password = admin_data.get('password')
+    def post(self, user_data):
+        user_data = request.get_json()
+        user = AdminModel.query.filter(
+            AdminModel.email == user_data["email"]
+        ).first()
 
-    # try to find an admin user with the given email
-        admin = AdminModel.query.filter_by(email=email).first()
+        if user and pbkdf2_sha256.verify(user_data["password"], user.password):
+            access_token = create_access_token(identity=user.id, fresh=True)
+            refresh_token = create_refresh_token(identity=user.id)
 
-    # if no admin user is found, return an error response
-        if not admin:
-          return {"message": "Invalid email or password"}, 401
-
-    # verify the password against the stored hash
-        if not pbkdf2_sha256.verify(password, admin.password):
-           return {"message": "Invalid email or password"}, 401
-
-    # if the password is correct, generate a JWT token with the user's email and is_administrator status
-        access_token = create_access_token(identity=email)
-        refresh_token = create_refresh_token(identity=user.email)
-
-    # return the access token as a JSON response
-        return {"message": "User successfully logged in", "access_token": access_token, "refresh_token": refresh_token}, 200
+            return jsonify({"message": "User successfully logged in", "access_token": access_token, "refresh_token": refresh_token})
+        
+        return jsonify({"message": "Invalid credentials"}), 401
+    
 
 
-@blp.route('/refresh')
-class Refresh(MethodView):
+# @blp.route('/refresh')
+ 
+class Refreshview(MethodView):
     @jwt_required(refresh=True)
     def post(self):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
         # get the user identity from the refresh token
         email = get_jwt_identity()
 
@@ -111,18 +114,56 @@ class Refresh(MethodView):
 
         # return the new access token as a JSON response
         return {"access_token": access_token}, 200
+    
+user_view = Refreshview.as_view('refresh_view')
+refresh_bp.add_url_rule('', view_func=user_view)
 
-@blp.route("/admins")
-class Adminlist(MethodView):
-    # retrieving all admin
-    @blp.response(200, AdminSchema(many=True))
+
+
+# retrieving all admin 
+
+class Adminview(MethodView):
+    @jwt_required()
+    @blp.response(200, AdminsSchema(many=True))
     def get(self):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
         all_admin = AdminModel.query.all()
         return all_admin
+    
+user_view = Adminview.as_view('Admin_view')
+Admin_bp.add_url_rule('', view_func=user_view)
 
         
-        
+# protected route  
+
 @app.route("/protected", methods=["GET"])
-@admin_required()
+@jwt_required()
+@admin_required
 def protected():
     return jsonify(foo="bar")
+
+
+# logout an admin 
+@blp.route("/logouts")
+class Logout(MethodView):
+    @jwt_required()
+    def post(self):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
+        jti = get_jwt()['jti']
+        try:
+         BLOCKLIST.add(jti)
+
+        except IntegrityError:
+         abort(400, message="you need to be logged in to have access")
+
+        return ({"message": "Successfully logged out"})

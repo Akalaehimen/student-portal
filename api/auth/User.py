@@ -7,24 +7,26 @@ from flask_jwt_extended import (create_access_token, create_refresh_token,
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import IntegrityError
-
 from Blocklist import BLOCKLIST
-<<<<<<< HEAD
 from api.schema import UserSchema, UsersSchema
-
 from ..Models.User import StudentModel
+from ..Models.admin import AdminModel
 from ..utils import db
-from flask import request
-=======
-from schema import UserSchema
+from flask import request, jsonify
+from ..schema import UserSchema
+from ..utils import db
 
-from ..Models.User import UserModel
-from ..utils import db
->>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
+
+
 
 blp = Blueprint("Users", "users", description="Operations on Users")
+user_bp = Blueprint('user_bp', __name__, url_prefix='/users')
+update_bp = Blueprint('update_bp', __name__, url_prefix='/students')
+delete_bp = Blueprint('delete_bp', __name__, url_prefix='/delete')
+retrive_bp = Blueprint('retrive_bp', __name__, url_prefix='/retrive')
 
 
+# register a student  
 @blp.route("/register")
 class UserRegister(MethodView):
     @blp.arguments(UserSchema)
@@ -52,11 +54,12 @@ class UserRegister(MethodView):
         user_number = f"{unique_id}{random.randint(1000, 9999)}"
         return user_number
 
-
-@blp.route("/login")
+# login a student 
+@blp.route("/login", methods=['POST'])
 class Login(MethodView):
     @blp.arguments(UserSchema)
     def post(self, user_data):
+        user_data = request.get_json()
         user = StudentModel.query.filter(
             StudentModel.email == user_data["email"]
         ).first()
@@ -65,9 +68,9 @@ class Login(MethodView):
             access_token = create_access_token(identity=user.id, fresh=True)
             refresh_token = create_refresh_token(identity=user.id)
 
-            return {"message": "User successfully logged in", "access_token": access_token, "refresh_token": refresh_token}
+            return jsonify({"message": "User successfully logged in", "access_token": access_token, "refresh_token": refresh_token})
         
-        abort(401, message="Invalid Credentials")
+        return jsonify({"message": "Invalid credentials"}), 401
 
 
 @blp.route("/refresh")
@@ -81,6 +84,7 @@ class TokenRefresh(MethodView):
 
         return {"access_token": new_token}
 
+# logout a student  
 @blp.route("/logout")
 class Logout(MethodView):
     @jwt_required()
@@ -94,38 +98,56 @@ class Logout(MethodView):
 
         return ({"message": "Successfully logged out"})
 
-@blp.route("/user/<int:user_id>")
-class User(MethodView):
-    # Get a student by id
-    @blp.response(200, UserSchema)
-    def get(self, user_id):
-        user = StudentModel.query.get_or_404(user_id)
-        return user
     
     # Delete a student by id
+class DeleteView(MethodView):
+    @jwt_required()
     def delete(self, user_id):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
         user = StudentModel.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
 
         return {"message": "Student Deleted"}, 200
     
+user_view = DeleteView.as_view('user_view')
+delete_bp.add_url_rule('/<int:user_id>', view_func=user_view)
+    
 
-
-@blp.route("/users")
-class UserList(MethodView):
-    # retrieving all student
-    @blp.response(200, UserSchema(many=True))
-    def get(self):
+# retrieving all student  
+class RetriveView(MethodView):
+      @jwt_required()
+      @blp.response(200, UsersSchema(many=True))
+      def get(self):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
         all_student = StudentModel.query.all()
         return all_student
     
+user_view = RetriveView.as_view('user_view')
+retrive_bp.add_url_rule('', view_func=user_view)
+
 # update a student
-@blp.route("/students/<int:student_id>", methods=["PUT"])
-class UpdateStudent(MethodView):
+class Updateview(MethodView):
+    @jwt_required()
     @blp.arguments(UsersSchema)
     @blp.response(200, UsersSchema)
     def put(self, student_data, student_id):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
         student = StudentModel.query.get(student_id)
         if student:
             student.firstname = student_data.get("firstname")
@@ -135,3 +157,24 @@ class UpdateStudent(MethodView):
             return student, 200
         else:
             abort(404, message="Student not found")
+
+user_view = Updateview.as_view('update_view')
+update_bp.add_url_rule('/<int:student_id>', view_func=user_view)
+
+
+# get a student by is id 
+class UserView(MethodView):
+    @jwt_required()
+    def get(self, user_id):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
+        user = StudentModel.query.get_or_404(user_id)
+        user_data = UserSchema().dump(user)
+        return user_data
+
+user_view = UserView.as_view('user_view')
+user_bp.add_url_rule('/<int:user_id>', view_func=user_view)

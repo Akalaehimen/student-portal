@@ -9,11 +9,19 @@ from datetime import timedelta
 from api.auth.User import blp as auth_blueprint
 from api.auth.Score import blp as score_blueprint
 from api.auth.Course import blp as course_blueprint
-<<<<<<< HEAD
-from api.auth.retrive import grades_bp as grades_blueprint
 from api.auth.admin import blp as admin_blueprint
-=======
->>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
+from api.auth.User import user_bp as user_blueprint
+from api.auth.User import update_bp as update_blueprint
+from api.auth.User import delete_bp as delete_blueprint
+from api.auth.User import retrive_bp as retrive_blueprint
+from api.auth.Score import score_bp as scores_blueprint
+from api.auth.Score import result_bp as result_blueprint
+from api.auth.Course import student_bp as student_blueprint
+from api.auth.Course import register_bp as register_blueprint
+from api.auth.Course import store_bp as store_blueprint
+from api.auth.retrive import get_bp as get_blueprint
+from api.auth.admin import refresh_bp as refresh_blueprint
+from api.auth.admin import Admin_bp as admins_blueprint
 from api.config.config import config_dict
 
 
@@ -30,27 +38,9 @@ def create_app(db_url=None, config=config_dict['dev']):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
-<<<<<<< HEAD
-    
 
-    api = Api(app
-=======
-    authorizations = {
-        "Bearer Auth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "Authorization",
-            "description": "Add a JWT token to the header with ** Bearer &lt;JWT&gt; token to authorize** "
-        }
-    }
 
-    api = Api(app,
-        # # title='Student portal API',
-        # description='A simple student portal REST API service',
-        # authorizations=authorizations,
-        # security='Bearer Auth'
->>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
-        )
+    api = Api(app)
 
     migrate = Migrate(app, db)
 
@@ -94,15 +84,26 @@ def create_app(db_url=None, config=config_dict['dev']):
         db.create_all()
 
     api.register_blueprint(auth_blueprint)
-<<<<<<< HEAD
     api.register_blueprint(score_blueprint)
     api.register_blueprint(course_blueprint)
-    api.register_blueprint(grades_blueprint)
     api.register_blueprint(admin_blueprint)
-    
-=======
-    # api.register_blueprint(score_blueprint)
+    api.register_blueprint(user_blueprint)
+    api.register_blueprint(update_blueprint)
+    api.register_blueprint(delete_blueprint)
+    api.register_blueprint(retrive_blueprint)
+    api.register_blueprint(scores_blueprint)
+    api.register_blueprint(result_blueprint)
+    api.register_blueprint(student_blueprint)
+    api.register_blueprint(register_blueprint)
+    api.register_blueprint(store_blueprint)
+    api.register_blueprint(get_blueprint)
+    api.register_blueprint(refresh_blueprint)
+    api.register_blueprint(admins_blueprint)
+
+
+
+
     # api.register_blueprint(course_blueprint)
->>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
+
 
     return app

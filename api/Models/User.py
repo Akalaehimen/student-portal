@@ -1,8 +1,5 @@
 from ..utils import db
-<<<<<<< HEAD
 from datetime import datetime
-=======
->>>>>>> 20516bdc5ec9b4448244fdb4d9c39ba79f78a175
 
 class StudentModel(db.Model):
     __tablename__ = "students"
@@ -11,6 +8,7 @@ class StudentModel(db.Model):
     firstname = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+    matric_no = db.Column(db.String(50), unique=True)
     date_created = db.Column(db.DateTime(), nullable=False, default=datetime.utcnow)
 
     

@@ -20,8 +20,8 @@ class CourseSchema(Schema):
 
 class ScoreSchema(Schema):
     id = fields.Int(dump_only=True)
-    # name = fields.Str(required=True)
-    # grade = fields.Str(required=True)
+    name = fields.Str(required=True)
+    grade = fields.Str(required=True)
     
 
 class UpdatestudentSchema(Schema):
@@ -44,7 +44,7 @@ class ResultSchema(Schema):
     course_code = fields.Str(required=True)
     course_title = fields.Str(required=True)
     grade = fields.Int(required=True)
-    semester = fields.Int(required=True)
+    
 
 class AdminlogSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -57,10 +57,9 @@ class UsersSchema(Schema):
     surname = fields.Str(required=True)
     firstname = fields.Str(required=True)
 
-class CoursesSchema(Schema):
-    # id = fields.Int(dump_only=True)
-    # surname = fields.Str(required=True)
-    # firstname = fields.Str(required=True)
-    course_name = fields.Str(required=True)
-    # course_code = fields.Int(required=True)
-    # Lecturer_name = fields.Str(required=True)
+
+class AdminsSchema(Schema):
+    id = fields.Int(dump_only=True)
+    email = fields.Str(required=True)
+    surname = fields.Str(required=True)
+    firstname = fields.Str(required=True)

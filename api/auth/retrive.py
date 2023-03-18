@@ -1,31 +1,34 @@
 from flask import jsonify
-from sqlalchemy import create_engine
+
 from flask_smorest import Blueprint
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from ..Models.retrive import Grade
+from ..Models.Score import ScoreModel
+from ..Models.User import  StudentModel
+from ..Models.Course import CourseModel
+from flask_jwt_extended import  jwt_required, get_jwt_identity
+from flask.views import MethodView
+from ..Models.admin import AdminModel
 
 
-# Create a database engine and sessionmaker
-engine = create_engine('postgresql://user:password@localhost/mydatabase')
-Session = sessionmaker(bind=engine)
-
-# Define a declarative base
-Base = declarative_base()
+get_bp = Blueprint('get_bp', __name__, url_prefix='/grades')
 
 
-# Define a blueprint for grades
-grades_bp = Blueprint("grades", __name__, description="retrieving of score for a student")
+# retriveing a student result per course  
+class GetView(MethodView):
+    @jwt_required()
+    def get(self, course_name, student_surname):
+        current_user_id = get_jwt_identity()
+        current_user = AdminModel.query.get(current_user_id)
+        if current_user is None:
+            return {"message": "Invalid user ID in JWT token"}, 401
+        elif current_user.role != "admin":
+            return {"message": "You are not authorized to perform this action"}, 403
 
-@grades_bp.route("/courses/<int:course_id>/students/<int:student_id>/grades", methods=["GET"])
-def get_student_grades(course_id, student_id):
-    # Query the database for the grade
-    session = Session()
-    grade = session.query(Grade).filter_by(course_id=course_id, student_id=student_id).first()
-    
-    # If a grade is found, return a JSON response with the grade
-    if grade:
-        return jsonify({"student_id": student_id, "grade": grade.grade})
-    # If no grade is found, return a JSON response with a message indicating that no grade was found
-    else:
-        return jsonify({"message": f"No grades found for student {student_id} in course {course_id}"})
+        # Query the database for the student's grade
+        grade = ScoreModel.query.join(StudentModel).join(CourseModel).filter(CourseModel.course_name==course_name, StudentModel.surname==student_surname).first()
+        if grade:
+            return jsonify({"course_name": course_name, "student_surname": student_surname, "grade": grade.grade})
+        else:
+            return jsonify({"message": f"No grade found for student {student_surname} in course {course_name}"})
+        
+user_view = GetView.as_view('get_view')
+get_bp.add_url_rule('/courses/<string:course_name>/students/<string:student_surname>', view_func=user_view, methods=['GET'])
